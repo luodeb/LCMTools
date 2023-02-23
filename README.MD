@@ -10,7 +10,7 @@
 # <p align="center">LCMTools: A script that calls LCModel through Python:</p>
 
 <p align="center">
-    <a href="https://github.com/luodeb/LCMTools/main/LICENSE">
+    <a href="https://github.com/luodeb/LCMTools/blob/master/LICENSE">
         <img src="https://img.shields.io/cocoapods/l/EFQRCode.svg?style=flat">
         </a>
     <a href="https://pypi.python.org/pypi/lcmtools">
@@ -32,10 +32,10 @@
 
 #### 方法二
 ```
->>> git clone https://github.com/yhangf/PyQuickInstall.git
+>>> git clone https://github.com/luodeb/LCMTools.git
 >>> python3 setup.py install
 ```
 
 ## LICENSE
-[MIT](https://github.com/yhangf/PyQuickInstall/blob/master/LICENSE)
+[MIT](https://github.com/luodeb/LCMTools/blob/master/LICENSE)
 
