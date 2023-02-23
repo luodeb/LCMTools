@@ -14,6 +14,7 @@ from scipy import signal
 import time
 
 class LCMConfig(object):
+    # 输入data方式配置信息
     echot = "30"
     hzpppm = "1.27731e+02"
     nsize = "2048"
@@ -23,37 +24,45 @@ class LCMConfig(object):
     deltat = '2.500e-04'
     B0 = '3.0'
     seq = 'PRESS'
-    # 获取今天的日期
-    filname = time.strftime("lcm_data_%m%d_%H%M", time.localtime())
-
-    filraw = f'/data2/ldb/objects/data/temp/{filname}.raw'
+    # 输入文件方式配置信息
+    filraw:str = None
 
     def __str__(self):
         return "({}:{})".format(self.__class__.__name__, ",".join("{}={}".format(k, getattr(self, k)) for k in self.__dict__.keys()))
 
 class RdaLcmodel(object):
-    version = '2023/02/22 '
+    version = '2023/02/23 '
     def __init__(self, basisFile):
         self.basisFile = basisFile
-        # self.lcmConfig = LCMConfig()
-        self.set_config(LCMConfig())
+        self.lcmConfig = None
 
     # 从文件中读取数据
-    def load_file(self, baseFile):
+    def load_file(self, baseFile, lcmConfig = LCMConfig()):
         '''
             只能加载.raw文件或者.rda文件
+            lcmConfig.filraw: 如果不为空，那么就是在设置的地方生成文件，否则就是在baseFile的路径生成文件
         '''
-        self.fit_file(baseFile, self.basisFile)
+        self.baseType = baseFile.split('.')[-1]
+        self.__set_config(lcmConfig)
+        if self.lcmConfig.filraw is not None:
+            self.__fit_file(self.lcmConfig.filraw, self.basisFile)
+        else:
+            self.__fit_file(baseFile, self.basisFile)
 
         # 生成raw文件
         if self.baseType == 'rda':
             print('LCMTools[raw]: ' + self.filraw)
-            self.read_rda()
-        else:
+            self.__read_rda(baseFile)
+        elif self.baseType == 'raw':
             # 读取raw文件
-            self.read_raw(self.filraw)
+            self.__read_raw(baseFile)
+            # 如果地址不一致，那么复制文件
+            if self.filraw == baseFile:
+                os.system(f'cp {baseFile} {self.filraw}')
+        else:
+            raise Exception('LCMTools: 未知的文件类型')
 
-        self.set_config(self.lcmConfig)
+        self.__set_config(self.lcmConfig)
 
     def load_data(self, data, dataType='time' , lcmConfig = LCMConfig()):
         '''
@@ -65,15 +74,16 @@ class RdaLcmodel(object):
         # 读取长度信息
         lcmConfig.nsize = len(data)
         # 加载配置信息
-        self.set_config(lcmConfig)
+        self.__set_config(lcmConfig)
 
         # 生成文件名称
-        self.fit_file(lcmConfig.filraw, self.basisFile)
+        self.__fit_file(lcmConfig.filraw, self.basisFile)
 
         # 生成raw文件
-        self.convert_data_raw(data, dataType)
+        self.__convert_data_raw(data, dataType)
 
-    def set_config(self, lcmConfig = LCMConfig()):
+    def __set_config(self, lcmConfig):
+        
         self.lcmConfig = lcmConfig
 
         self.ctl_dict = {}
@@ -103,13 +113,12 @@ class RdaLcmodel(object):
     def get_config(self):
         return self.lcmConfig
 
-    def fit_file(self, baseFile, basisFile):
+    def __fit_file(self, baseFile, basisFile):
         # 生成数据
-        self.baseType = baseFile.split('.')[-1]
+        
         self.baseFile = ".".join(baseFile.split(".")[0:-1])
 
         # input
-        self.rdaFile = self.baseFile + ".rda"
         self.filraw = self.baseFile + ".raw"
         self.filctrl = self.baseFile + ".control"
         self.filbas = basisFile
@@ -121,9 +130,9 @@ class RdaLcmodel(object):
 
         self.title = self.baseFile.split('/')[-1]
 
-    def read_rda(self):
+    def __read_rda(self,rdaFile: str ):
         # 将rda文件转换为raw文件，并且读取配置信息
-        with open(self.rdaFile, 'rb') as file:
+        with open(rdaFile, 'rb') as file:
             rdaText = file.read()
 
         headtext = rdaText[rdaText.find(b'>>> Begin of header <<<') + len(
@@ -160,16 +169,16 @@ class RdaLcmodel(object):
         data = struct.unpack('%dd' % int(len(bytext)/8), bytext)
 
         wrdata = ""
-        self.time_data = np.zeros(int(len(data)/2))
+        self.time_data = np.zeros(int(len(data)/2),dtype=complex)
         for i in range(int(len(data)/2)):
             wrdata += "{:>13.6e}  {:>13.6e}\n  ".format(data[2*i], data[2*i+1])
-            self.time_data[i] = data[2*i] - 1j*data[2*i+1]
+            self.time_data[i] = float(data[2*i]) - 1j*float(data[2*i+1])
         with open(self.filraw, 'w') as f:
             f.write(headers + wrdata)
 
         self.spec_data = np.fft.fftshift(np.fft.fft(self.time_data))
 
-    def convert_data_raw(self, data, dtype='time'):
+    def __convert_data_raw(self, data, dtype='time'):
         '''
             type:
             spec_real 是频域的实部数据;
@@ -200,7 +209,7 @@ class RdaLcmodel(object):
         with open(self.filraw, 'w') as f:
             f.write(headers + wrdata)
 
-    def read_raw(self,filraw):
+    def __read_raw(self,filraw:str):
         # 读取raw文件
         with open(filraw, 'rb') as file:
             rdaText = file.read().decode()
@@ -235,7 +244,7 @@ class RdaLcmodel(object):
         else:
             assert False, 'dtype must be time or spec'
 
-    def gen_control(self):
+    def __gen_control(self):
         # 生成control文件
         # control file
         control_text = (f" $LCMODL\n title= '{self.title}'\n "
@@ -247,7 +256,7 @@ class RdaLcmodel(object):
         with open(self.filctrl, 'w') as control:
             control.write(control_text)
 
-    def convert_ps_pdf(self):
+    def __convert_ps_pdf(self):
         # 将PostScript文件转换为pdf文件
         args = [
             "ps2pdf",  # actual value doesn't matter
@@ -265,7 +274,7 @@ class RdaLcmodel(object):
         print('\nLCMTools[pdf]: ',*args)
         ghostscript.Ghostscript(*args)
 
-    def run_command(self):
+    def __run_command(self):
         # 运行lcmodel命令
         self.lc_command = '~/.lcmodel/bin/lcmodel < ' + self.filctrl
         os.system(self.lc_command)
@@ -279,17 +288,17 @@ class RdaLcmodel(object):
         print('LCMTools[config]: ', self.lcmConfig)
         # 依次执行相应的函数
         print('LCMTools[control]: ' + self.filctrl)
-        self.gen_control()
+        self.__gen_control()
 
         self.lc_command = '~/.lcmodel/bin/lcmodel < ' + self.filctrl
         print('LCMTools[lcmodel]: ' + self.lc_command)
-        self.run_command()
+        self.__run_command()
 
-        self.convert_ps_pdf()
+        self.__convert_ps_pdf()
         if delTemp:
             self.clean_temp()
 
-    def clean_temp(self, fileList=['control', 'raw', 'ps', 'csv']):
+    def clean_temp(self, fileList:list=['control', 'raw', 'ps', 'csv']):
         # 删除不需要的文件
         for file in fileList:
             try:
@@ -308,6 +317,7 @@ if __name__ == "__main__":
     # 直接将频域的实部转换为raw文件
     lcm_config = LCMConfig()
     lcm_config.echot = '30.0'
+    lcm_config.filraw = '/data2/ldb/objects/fida/out0223.raw'
     lcm2 = RdaLcmodel("/data2/ldb/objects/lcmodel/basis/3t/press_te30_3t_v3.basis")
     lcm2.load_data(spec_data.real,'spec_real',lcm_config)
     lcm2.run_lcmodel()
