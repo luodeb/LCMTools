@@ -27,7 +27,7 @@
 #### 方法一（推荐）
 
 ```
->>> pip install pqi
+>>> pip install lcmtools
 ```
 
 #### 方法二
