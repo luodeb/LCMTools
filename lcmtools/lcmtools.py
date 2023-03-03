@@ -31,7 +31,7 @@ class LCMConfig(object):
         return "({}:{})".format(self.__class__.__name__, ",".join("{}={}".format(k, getattr(self, k)) for k in self.__dict__.keys()))
 
 class RdaLcmodel(object):
-    version = '2023/02/23 '
+    version = '2023/03/03 '
     def __init__(self, basisFile):
         self.basisFile = basisFile
         self.lcmConfig = None
@@ -57,7 +57,7 @@ class RdaLcmodel(object):
             # 读取raw文件
             self.__read_raw(baseFile)
             # 如果地址不一致，那么复制文件
-            if self.filraw == baseFile:
+            if self.filraw != baseFile:
                 os.system(f'cp {baseFile} {self.filraw}')
         else:
             raise Exception('LCMTools: 未知的文件类型')
