@@ -195,7 +195,7 @@ class RdaLcmodel(object):
             fid_mod = np.fft.ifft(np.fft.ifftshift(specs))
 
         self.time_data = fid_mod
-        self.spec_time = np.fft.fftshift(np.fft.fft(fid_mod))
+        self.spec_data = np.fft.fftshift(np.fft.fft(fid_mod))
 
         data = np.zeros(int(len(fid_mod)*2))
         data[::2] = fid_mod.real
