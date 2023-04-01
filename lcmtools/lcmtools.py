@@ -279,7 +279,7 @@ class RdaLcmodel(object):
         self.lc_command = '~/.lcmodel/bin/lcmodel < ' + self.filctrl
         os.system(self.lc_command)
 
-    def run_lcmodel(self, delTemp=False):
+    def run_lcmodel(self, del_temp=False, gen_pdf = True):
         print('LCMTools[version]: ', self.version)
 
         # 打印现在的时间
@@ -294,8 +294,9 @@ class RdaLcmodel(object):
         print('LCMTools[lcmodel]: ' + self.lc_command)
         self.__run_command()
 
-        self.__convert_ps_pdf()
-        if delTemp:
+        if gen_pdf:
+            self.__convert_ps_pdf()
+        if del_temp:
             self.clean_temp()
 
     def clean_temp(self, fileList:list=['control', 'raw', 'ps', 'csv']):

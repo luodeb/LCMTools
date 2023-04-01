@@ -21,6 +21,7 @@
         </a>
 </p>
 一个在Python里面方便调用LCModel的Python模块。
+
 ## 怎么使用(兼容linux/MacOS)
 
 ### 1.安装
