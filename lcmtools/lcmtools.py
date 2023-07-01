@@ -127,8 +127,33 @@ class RdaLcmodel(object):
         self.filps = self.baseFile + ".ps"
         self.filcsv = self.baseFile + ".csv"
         self.filpdf = self.baseFile + ".pdf"
+        self.filtab = self.baseFile + ".table"
+        self.filcoo = self.baseFile + ".coord"
+        self.filpri = self.baseFile + ".print"
 
         self.title = self.baseFile.split('/')[-1]
+
+    def load_result(self):
+        # 读取结果
+        with open(self.filcoo, 'rb') as f:
+            text = f.read().decode().replace('\n','')
+        sdata = text.split()
+        ppm_index = sdata.index('ppm-axis')
+        phase_index = sdata.index('phased')
+        fit_index = sdata.index('fit')
+        background_index = sdata.index('background')
+        data_len = int(sdata[ppm_index-3])
+        ppm = np.zeros(data_len)
+        phase = np.zeros(data_len)
+        fit = np.zeros(data_len)
+        background = np.zeros(data_len)
+        for i in range(data_len):
+            ppm[i] = float(sdata[ppm_index+3+i])
+            phase[i] = float(sdata[phase_index+4+i])
+            fit[i] = float(sdata[fit_index+5+i])
+            background[i] = float(sdata[background_index+3+i])
+
+        return ppm, phase, fit, background
 
     def __read_rda(self,rdaFile: str ):
         # 将rda文件转换为raw文件，并且读取配置信息
@@ -247,11 +272,20 @@ class RdaLcmodel(object):
     def __gen_control(self):
         # 生成control文件
         # control file
-        control_text = (f" $LCMODL\n title= '{self.title}'\n "
-                        f"ppmst= {self.ctl_dict['ppmst']}\n ppmend= {self.ctl_dict['ppmend']}\n "
-                        f"nunfil= {self.ctl_dict['nunfil']}\n key= 210387309\n hzpppm= {self.ctl_dict['hzpppm']}\n "
-                        f"filraw= '{self.filraw}'\n filps= '{self.filps}'\n filbas= '{self.filbas}'\n filcsv= '{self.filcsv}'\n "
-                        f"lcsv = 11\n echot= {self.ctl_dict['echot']}\n deltat= {self.ctl_dict['deltat']}\n $END")
+        control_text = (f" $LCMODL\n "
+                        f"title= '{self.title}'\n "
+                        f"ppmst= {self.ctl_dict['ppmst']}\n "
+                        f"ppmend= {self.ctl_dict['ppmend']}\n "
+                        f"nunfil= {self.ctl_dict['nunfil']}\n "
+                        f"key= 210387309\n "
+                        f"hzpppm= {self.ctl_dict['hzpppm']}\n "
+                        f"filraw= '{self.filraw}'\n filps= '{self.filps}'\n "
+                        f"filbas= '{self.filbas}'\n filcsv= '{self.filcsv}'\n "
+                        f"filtab= '{self.filtab}'\n filcoo= '{self.filcoo}'\n "
+                        f"filpri= '{self.filpri}'\n "
+                        f"lcsv = 11\n lprint = 6\n lcoord = 9\n ltable = 7\n "
+                        f"echot= {self.ctl_dict['echot']}\n "
+                        f"deltat= {self.ctl_dict['deltat']}\n $END")
 
         with open(self.filctrl, 'w') as control:
             control.write(control_text)
