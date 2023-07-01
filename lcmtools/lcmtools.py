@@ -14,6 +14,20 @@ from scipy import signal
 import time
 
 class LCMConfig(object):
+    '''
+    echot = "30"
+    hzpppm = "1.27731e+02"
+    nsize = "2048"
+
+    ppmst = "4.0"
+    ppmend = "0.2"
+    deltat = '2.500e-04'
+    B0 = '3.0'
+    seq = 'PRESS'
+    # 输入文件方式配置信息
+    filraw:str = None
+    '''
+    
     # 输入data方式配置信息
     echot = "30"
     hzpppm = "1.27731e+02"
